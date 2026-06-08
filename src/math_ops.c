@@ -1,7 +1,14 @@
 #include <math.h>
 #include <stdlib.h>
-#include "math_ops.h"
 #include "tensor.h"
+#include "math_ops.h"
+
+Tensor* mat_mul(Tensor* A, Tensor* B);
+Tensor* mat_add(Tensor* A, Tensor* B);
+void softmax(float* x, int len);
+void layer_norm(float* x, float* gamma, float* beta, int len);
+float gelu(float x);
+
 Tensor* mat_mul(Tensor* A, Tensor* B) {
     Tensor* C = tensor_create(A->rows, B->cols);
     for (int i = 0; i < A->rows; i++) {
