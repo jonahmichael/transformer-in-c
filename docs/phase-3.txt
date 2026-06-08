@@ -1,0 +1,48 @@
+Multi-Head Attention
+
+self attention can capture only one mening
+wheeas multihead attention can capture multiple meanings...
+
+(i will explain to you in detail in my blog..)
+
+Each head learns to attend to different aspects:
+
+One head might focus on syntax (subject-verb relationships)
+Another on coreference (which "it" refers to)
+Another on position (nearby words)
+
+One head can only look at the sentence from one perspective. Multiple heads look at it from many perspectives simultaneously, then concatenate the results.  (AI said this)
+
+The multi-head attention formula is:
+
+MultiHead(Q,K,V) = Concat(head_1, ..., head_h) * W_O
+
+where head_i = Attention(Q*W_Qi, K*W_Ki, V*W_Vi)
+
+In plain English:
+( reger to the image in pg 4 of the paper)
+
+Split Q, K, V into h heads using learned weight matrices
+Run attention independently on each head
+Concatenate all outputs
+Multiply by output weight matrix W_O
+
+---
+
+Q. if d_model = 512 and we have h = 8 heads, what is d_k per head?
+
+ d_k per head = d_model / h = 512 / 8 = 64
+
+ Each head gets 64 dimensions. So instead of one attention over 512 dims, we run 8 parallel attentions each over 64 dims. Same total computation, but 8 different POV.
+
+ Multi-head attention needs weight matrices:
+
+W_Q → shape (d_model, d_k) per head
+W_K → shape (d_model, d_k) per head
+W_V → shape (d_model, d_k) per head
+W_O → shape (h * d_k, d_model) = (d_model, d_model)
+
+We'll represent all heads' weights together as:
+
+W_Q → shape (d_model, d_model) — all heads combined
+Same for W_K, W_V
