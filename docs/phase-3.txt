@@ -35,6 +35,11 @@ Q. if d_model = 512 and we have h = 8 heads, what is d_k per head?
 
  Each head gets 64 dimensions. So instead of one attention over 512 dims, we run 8 parallel attentions each over 64 dims. Same total computation, but 8 different POV.
 
+ Number of heads h
+Model dimension d_model
+Weight matrices W_Q, W_K, W_V, W_O — one per head... or actually one big matrix that gets split
+What type would the weight matrices be in our code? Tensor
+
  Multi-head attention needs weight matrices:
 
 W_Q → shape (d_model, d_k) per head
@@ -46,3 +51,135 @@ We'll represent all heads' weights together as:
 
 W_Q → shape (d_model, d_model) — all heads combined
 Same for W_K, W_V
+
+typedef struct {
+    int h;
+    int d_model;
+    Tensor* W_Q;
+    Tensor* W_K;
+    Tensor* W_V;
+    Tensor* W_O;
+} MultiHeadAttention;
+
+we need a mha_create function that allocates this struct and initializes the weight matrices.What should the signature of mha_create look like? What does it take as parameters and what does it return?
+
+hint: The return type shouldn't be Tensor* — we're creating a MultiHeadAttention, not a Tensor
+
+Not void either — void means it returns nothing.Not void either — void means it returns nothing. We need to return the newly created struct so we can use it.
+What's the type of the struct we just defined?
+
+MultiHeadAttention* mha_create(int h, int d_model);
+
+Now try writing the body. It needs to:
+
+Malloc the struct
+Set h and d_model fields
+Create the 4 weight matrices with tensor_create
+Return the pointer
+
+MultiHeadAttention* mha_create(int h, int d_model) {
+    MultiHeadAttention* mha = malloc(sizeof(MultiHeadAttention));
+    mha->h = h;
+    mha->d_model = d_model;
+    mha->W_Q = tensor_create(d_model, d_model);
+    mha->W_K = tensor_create(d_model, d_model);
+    mha->W_V = tensor_create(d_model, d_model);
+    mha->W_O = tensor_create(d_model, d_model);
+    return mha;
+}
+
+
+Now write the partner function mha_free
+
+void mha_free(MultiHeadAttention* mha) {
+    tensor_free(mha->W_Q);
+    tensor_free(mha->W_K);
+    tensor_free(mha->W_V);
+    tensor_free(mha->W_O);
+    free(mha);
+}  
+# Notice we use tensor_free for the weight matrices (since they're Tensors) and free for the struct itself.
+
+Now the big one: mha_forward. This is the actual multi-head attention forward pass.
+
+Now the big one — mha_forward. This is the actual multi-head attention forward pass.
+The steps are:
+
+[A] Project Q, K, V using weight matrices → Q' = Q * W_Q, etc.
+[B] Split into h heads
+[C]-Run attention on each head
+[D} Concatenate outputs
+[E] Multiply by W_O
+
+This is more complex than anything we've written so far.
+
+(i had this above doubt and AI helped me understand and i'll add my understanding here)
+
+
+[A]: Project Q, K, V using weight matrices → Q' = Q * W_Q, etc.
+1. Q comes in with shape (seq_len, d_model) and W_Q is (d_model, d_model).
+
+2. Q comes in with shape (seq_len, d_model) and W_Q is (d_model, d_model).
+Q' = Q * W_Q
+(seq_len, d_model) x (d_model, d_model) = (seq_len, d_model)
+
+3. Same shape goes in and comes out — but the values are transformed. W_Q is a learned matrix that transforms Q into a better representation for attention. Think of it like this — raw Q is just the input. Q * W_Q is Q after the model has learned how to ask better questions.
+Same idea for K and V — they get transformed into better keys and values.
+
+
+[B] Split into h heads
+
+ If Q' is (seq_len, d_model) and we have h heads, each head gets a slice of Q' with shape (seq_len, d_k) where d_k = d_model / h.
+
+  head 0 gets columns 0 to d_k, head 1 gets columns d_k to 2*d_k, and so on.
+
+  We need a helper function to extract a slice of columns from a tensor. Let's call it get_head_slice(Tensor* X, int head, int d_k).
+
+  get_head_slice extracts columns head*d_k to (head+1)*d_k from tensor X.
+For example if X is (seq_len, 8) and d_k=4:
+
+head 0 → columns 0,1,2,3
+head 1 → columns 4,5,6,7
+
+Output shape is (seq_len, d_k).
+
+Tensor* get_head_slice(Tensor* X, int head, int d_k);
+
+Now the body. We need to:
+
+Create output tensor of shape (X->rows, d_k)
+Loop over rows and columns
+Copy columns from head*d_k to (head+1)*d_k
+
+Tensor* get_head_slice(Tensor* X, int head, int d_k) {
+    Tensor* out = tensor_create(X->rows, d_k);
+    for (int i = 0; i < X->rows; i++) {
+        for (int j = 0; j < d_k; j++) {
+            tensor_set(out, i, j, tensor_get(X, i, head * d_k + j));
+        }
+    }
+    return out;
+}
+
+The key insight — head * d_k + j is the column offset in X. Head 0 starts at column 0, head 1 starts at column d_k, head 2 at 2*d_k, and so on.
+
+[C]-Run attention on each head
+THIS WE HAVE ALREAYD DONE IN SELF ATTENTION SO IG ITS SELF EXPLANATORY
+
+[D]] Concatenate outputs
+
+We need the reverse operation — concat_heads that takes an array of tensors and combines their columns.
+
+If each head output is (seq_len, d_k) and we have h heads, the output is (seq_len, h*d_k) = (seq_len, d_model).
+
+Try writing the signature:
+
+It needs to take an array of Tensors and the number of heads. How would you pass an array of Tensor* in C?
+
+An array of Tensor* in C is just Tensor** — a pointer to pointers. So:
+Tensor* concat_heads(Tensor** heads, int h, int d_k);
+
+WHERE: heads — array of h tensors, each (seq_len, d_k)
+h — number of heads
+d_k — dimension per head  
+
