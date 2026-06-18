@@ -102,7 +102,7 @@ void mha_free(MultiHeadAttention* mha) {
 
 Now the big one: mha_forward. This is the actual multi-head attention forward pass.
 
-Now the big one — mha_forward. This is the actual multi-head attention forward pass.
+
 The steps are:
 
 [A] Project Q, K, V using weight matrices → Q' = Q * W_Q, etc.
@@ -117,9 +117,9 @@ This is more complex than anything we've written so far.
 
 
 [A]: Project Q, K, V using weight matrices → Q' = Q * W_Q, etc.
+
 1. Q comes in with shape (seq_len, d_model) and W_Q is (d_model, d_model).
 
-2. Q comes in with shape (seq_len, d_model) and W_Q is (d_model, d_model).
 Q' = Q * W_Q
 (seq_len, d_model) x (d_model, d_model) = (seq_len, d_model)
 
@@ -147,9 +147,9 @@ Tensor* get_head_slice(Tensor* X, int head, int d_k);
 
 Now the body. We need to:
 
-Create output tensor of shape (X->rows, d_k)
-Loop over rows and columns
-Copy columns from head*d_k to (head+1)*d_k
+- Create output tensor of shape (X->rows, d_k)
+- Loop over rows and columns
+- Copy columns from head*d_k to (head+1)*d_k
 
 Tensor* get_head_slice(Tensor* X, int head, int d_k) {
     Tensor* out = tensor_create(X->rows, d_k);
@@ -183,3 +183,111 @@ WHERE: heads — array of h tensors, each (seq_len, d_k)
 h — number of heads
 d_k — dimension per head  
 
+Now try writing the body. It's the reverse of get_head_slice:
+
+- Create output of shape (heads[0]->rows, h * d_k)
+- Loop over rows, heads, and columns
+- Copy each head's values into the right columns
+
+seq_len and D_model aren't variables — use heads[0]->rows and h * d_k
+heads->rows → heads[0]->rows since heads is an array of pointers
+You need 3 loops — rows, heads, and columns per head
+
+Tensor* concat_heads(Tensor** heads, int h, int d_k) {
+    Tensor* out = tensor_create(heads[0]->rows, h * d_k);
+    for (int i = 0; i < heads[0]->rows; i++) {
+        for (int hd = 0; hd < h; hd++) {
+            for (int j = 0; j < d_k; j++) {
+                tensor_set(out, i, hd * d_k + j,
+                    tensor_get(heads[hd], i, j));
+            }
+        }
+    }
+    return out;
+}
+
+Notice hd * d_k + j — exact reverse of get_head_slice. Each head writes into its own column slice.
+
+
+Let's put together mha_forward.
+The full steps:
+
+Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
+    // Step 1: Project Q, K, V
+    // Step 2: For each head, slice and run attention
+    // Step 3: Concat all head outputs
+    // Step 4: Multiply by W_O
+    // return output
+}
+
+Step1: just 3 mat_mul calls.
+ mha is the whole struct. We need the specific weight matrices inside it. Which ones?
+
+Tensor* Q_proj = mat_mul(Q, mha->W_Q);
+Tensor* K_proj = mat_mul(K, mha->W_K);
+Tensor* V_proj = mat_mul(V, mha->W_V);
+
+Now Step 2: for each head, slice and run attention. 
+
+int d_k = mha->d_model / mha->h;
+Tensor* head_outputs[mha->h];
+
+for (int i = 0; i < mha->h; i++) {
+    // slice Q_proj, K_proj, V_proj for this head
+    // run attention
+    // store in head_outputs[i]
+}
+
+Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
+    int d_k = mha->d_model / mha->h;
+
+    // Step 1: Project Q, K, V
+    Tensor* Q_proj = mat_mul(Q, mha->W_Q);
+    Tensor* K_proj = mat_mul(K, mha->W_K);
+    Tensor* V_proj = mat_mul(V, mha->W_V);
+
+    // Step 2: For each head, slice and run attention
+    Tensor* head_outputs[mha->h];
+    for (int i = 0; i < mha->h; i++) {
+        Tensor* Q_i = get_head_slice(Q_proj, i, d_k);
+        Tensor* K_i = get_head_slice(K_proj, i, d_k);
+        Tensor* V_i = get_head_slice(V_proj, i, d_k);
+        head_outputs[i] = attention(Q_i, K_i, V_i);
+        tensor_free(Q_i);
+        tensor_free(K_i);
+        tensor_free(V_i);
+    }
+
+    // Step 3: Concat all head outputs
+    Tensor* concat = concat_heads(head_outputs, mha->h, d_k);
+
+    // Step 4: Multiply by W_O
+    Tensor* out = mat_mul(concat, mha->W_O);
+
+    // Free intermediates
+    tensor_free(Q_proj);
+    tensor_free(K_proj);
+    tensor_free(V_proj);
+    tensor_free(concat);
+    for (int i = 0; i < mha->h; i++)
+        tensor_free(head_outputs[i]);
+
+    return out;
+}
+
+
+ let me explain it visually so it clicks:
+
+ Input Q (seq_len, d_model)
+        ↓ × W_Q
+Q_proj (seq_len, d_model)
+        ↓ split into h heads
+Q_0  Q_1  Q_2 ... Q_h    each (seq_len, d_k)
+ ↓    ↓    ↓        ↓
+att  att  att  ... att    attention per head
+ ↓    ↓    ↓        ↓
+[concat all heads back]
+        ↓ × W_O
+   output (seq_len, d_model)
+
+Each head sees a different slice of the projected Q, K, V — so each head learns to attend differently. That's the whole idea.
