@@ -1,4 +1,4 @@
-Multi-Head Attention
+# Multi-Head Attention
 
 self attention can capture only one mening
 wheeas multihead attention can capture multiple meanings...
@@ -7,51 +7,69 @@ wheeas multihead attention can capture multiple meanings...
 
 Each head learns to attend to different aspects:
 
-One head might focus on syntax (subject-verb relationships)
-Another on coreference (which "it" refers to)
-Another on position (nearby words)
+- One head might focus on syntax (subject-verb relationships)
+- Another on coreference (which "it" refers to)
+- Another on position (nearby words)
 
 One head can only look at the sentence from one perspective. Multiple heads look at it from many perspectives simultaneously, then concatenate the results.  (AI said this)
 
 The multi-head attention formula is:
 
+```text
 MultiHead(Q,K,V) = Concat(head_1, ..., head_h) * W_O
+```
 
-where head_i = Attention(Q*W_Qi, K*W_Ki, V*W_Vi)
+where
+
+```text
+head_i = Attention(Q*W_Qi, K*W_Ki, V*W_Vi)
+```
 
 In plain English:
 ( reger to the image in pg 4 of the paper)
 
-Split Q, K, V into h heads using learned weight matrices
-Run attention independently on each head
-Concatenate all outputs
-Multiply by output weight matrix W_O
+1. Split Q, K, V into h heads using learned weight matrices
+2. Run attention independently on each head
+3. Concatenate all outputs
+4. Multiply by output weight matrix W_O
 
 ---
 
 Q. if d_model = 512 and we have h = 8 heads, what is d_k per head?
 
- d_k per head = d_model / h = 512 / 8 = 64
+```text
+d_k per head = d_model / h = 512 / 8 = 64
+```
 
- Each head gets 64 dimensions. So instead of one attention over 512 dims, we run 8 parallel attentions each over 64 dims. Same total computation, but 8 different POV.
+Each head gets 64 dimensions. So instead of one attention over 512 dims, we run 8 parallel attentions each over 64 dims. Same total computation, but 8 different POV.
 
- Number of heads h
-Model dimension d_model
-Weight matrices W_Q, W_K, W_V, W_O — one per head... or actually one big matrix that gets split
-What type would the weight matrices be in our code? Tensor
+- Number of heads h
+- Model dimension d_model
+- Weight matrices W_Q, W_K, W_V, W_O — one per head... or actually one big matrix that gets split
 
- Multi-head attention needs weight matrices:
+What type would the weight matrices be in our code?
 
+```text
+Tensor
+```
+
+Multi-head attention needs weight matrices:
+
+```text
 W_Q → shape (d_model, d_k) per head
 W_K → shape (d_model, d_k) per head
 W_V → shape (d_model, d_k) per head
 W_O → shape (h * d_k, d_model) = (d_model, d_model)
+```
 
 We'll represent all heads' weights together as:
 
+```text
 W_Q → shape (d_model, d_model) — all heads combined
 Same for W_K, W_V
+```
 
+```c
 typedef struct {
     int h;
     int d_model;
@@ -60,6 +78,7 @@ typedef struct {
     Tensor* W_V;
     Tensor* W_O;
 } MultiHeadAttention;
+```
 
 we need a mha_create function that allocates this struct and initializes the weight matrices.What should the signature of mha_create look like? What does it take as parameters and what does it return?
 
@@ -68,15 +87,18 @@ hint: The return type shouldn't be Tensor* — we're creating a MultiHeadAttenti
 Not void either — void means it returns nothing.Not void either — void means it returns nothing. We need to return the newly created struct so we can use it.
 What's the type of the struct we just defined?
 
+```c
 MultiHeadAttention* mha_create(int h, int d_model);
+```
 
 Now try writing the body. It needs to:
 
-Malloc the struct
-Set h and d_model fields
-Create the 4 weight matrices with tensor_create
-Return the pointer
+- Malloc the struct
+- Set h and d_model fields
+- Create the 4 weight matrices with tensor_create
+- Return the pointer
 
+```c
 MultiHeadAttention* mha_create(int h, int d_model) {
     MultiHeadAttention* mha = malloc(sizeof(MultiHeadAttention));
     mha->h = h;
@@ -87,63 +109,79 @@ MultiHeadAttention* mha_create(int h, int d_model) {
     mha->W_O = tensor_create(d_model, d_model);
     return mha;
 }
-
+```
 
 Now write the partner function mha_free
 
+```c
 void mha_free(MultiHeadAttention* mha) {
     tensor_free(mha->W_Q);
     tensor_free(mha->W_K);
     tensor_free(mha->W_V);
     tensor_free(mha->W_O);
     free(mha);
-}  
+}
+```
+
+```text
 # Notice we use tensor_free for the weight matrices (since they're Tensors) and free for the struct itself.
+```
 
 Now the big one: mha_forward. This is the actual multi-head attention forward pass.
 
-
 The steps are:
 
+```text
 [A] Project Q, K, V using weight matrices → Q' = Q * W_Q, etc.
 [B] Split into h heads
 [C]-Run attention on each head
 [D} Concatenate outputs
 [E] Multiply by W_O
+```
 
 This is more complex than anything we've written so far.
 
 (i had this above doubt and AI helped me understand and i'll add my understanding here)
 
-
-[A]: Project Q, K, V using weight matrices → Q' = Q * W_Q, etc.
+## [A]: Project Q, K, V using weight matrices → Q' = Q * W_Q, etc.
 
 1. Q comes in with shape (seq_len, d_model) and W_Q is (d_model, d_model).
 
+```text
 Q' = Q * W_Q
 (seq_len, d_model) x (d_model, d_model) = (seq_len, d_model)
+```
 
 3. Same shape goes in and comes out — but the values are transformed. W_Q is a learned matrix that transforms Q into a better representation for attention. Think of it like this — raw Q is just the input. Q * W_Q is Q after the model has learned how to ask better questions.
+
 Same idea for K and V — they get transformed into better keys and values.
 
+## [B] Split into h heads
 
-[B] Split into h heads
+If Q' is (seq_len, d_model) and we have h heads, each head gets a slice of Q' with shape (seq_len, d_k) where d_k = d_model / h.
 
- If Q' is (seq_len, d_model) and we have h heads, each head gets a slice of Q' with shape (seq_len, d_k) where d_k = d_model / h.
+```text
+head 0 gets columns 0 to d_k, head 1 gets columns d_k to 2*d_k, and so on.
+```
 
-  head 0 gets columns 0 to d_k, head 1 gets columns d_k to 2*d_k, and so on.
+We need a helper function to extract a slice of columns from a tensor. Let's call it get_head_slice(Tensor* X, int head, int d_k).
 
-  We need a helper function to extract a slice of columns from a tensor. Let's call it get_head_slice(Tensor* X, int head, int d_k).
+```c
+get_head_slice extracts columns head*d_k to (head+1)*d_k from tensor X.
+```
 
-  get_head_slice extracts columns head*d_k to (head+1)*d_k from tensor X.
 For example if X is (seq_len, 8) and d_k=4:
 
+```text
 head 0 → columns 0,1,2,3
 head 1 → columns 4,5,6,7
+```
 
 Output shape is (seq_len, d_k).
 
+```c
 Tensor* get_head_slice(Tensor* X, int head, int d_k);
+```
 
 Now the body. We need to:
 
@@ -151,6 +189,7 @@ Now the body. We need to:
 - Loop over rows and columns
 - Copy columns from head*d_k to (head+1)*d_k
 
+```c
 Tensor* get_head_slice(Tensor* X, int head, int d_k) {
     Tensor* out = tensor_create(X->rows, d_k);
     for (int i = 0; i < X->rows; i++) {
@@ -160,13 +199,15 @@ Tensor* get_head_slice(Tensor* X, int head, int d_k) {
     }
     return out;
 }
+```
 
 The key insight — head * d_k + j is the column offset in X. Head 0 starts at column 0, head 1 starts at column d_k, head 2 at 2*d_k, and so on.
 
-[C]-Run attention on each head
+## [C]-Run attention on each head
+
 THIS WE HAVE ALREAYD DONE IN SELF ATTENTION SO IG ITS SELF EXPLANATORY
 
-[D]] Concatenate outputs
+## [D]] Concatenate outputs
 
 We need the reverse operation — concat_heads that takes an array of tensors and combines their columns.
 
@@ -177,11 +218,18 @@ Try writing the signature:
 It needs to take an array of Tensors and the number of heads. How would you pass an array of Tensor* in C?
 
 An array of Tensor* in C is just Tensor** — a pointer to pointers. So:
-Tensor* concat_heads(Tensor** heads, int h, int d_k);
 
-WHERE: heads — array of h tensors, each (seq_len, d_k)
+```c
+Tensor* concat_heads(Tensor** heads, int h, int d_k);
+```
+
+WHERE:
+
+```text
+heads — array of h tensors, each (seq_len, d_k)
 h — number of heads
-d_k — dimension per head  
+d_k — dimension per head
+```
 
 Now try writing the body. It's the reverse of get_head_slice:
 
@@ -189,10 +237,13 @@ Now try writing the body. It's the reverse of get_head_slice:
 - Loop over rows, heads, and columns
 - Copy each head's values into the right columns
 
+```text
 seq_len and D_model aren't variables — use heads[0]->rows and h * d_k
 heads->rows → heads[0]->rows since heads is an array of pointers
 You need 3 loops — rows, heads, and columns per head
+```
 
+```c
 Tensor* concat_heads(Tensor** heads, int h, int d_k) {
     Tensor* out = tensor_create(heads[0]->rows, h * d_k);
     for (int i = 0; i < heads[0]->rows; i++) {
@@ -205,13 +256,15 @@ Tensor* concat_heads(Tensor** heads, int h, int d_k) {
     }
     return out;
 }
+```
 
 Notice hd * d_k + j — exact reverse of get_head_slice. Each head writes into its own column slice.
 
-
 Let's put together mha_forward.
+
 The full steps:
 
+```c
 Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
     // Step 1: Project Q, K, V
     // Step 2: For each head, slice and run attention
@@ -219,16 +272,21 @@ Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
     // Step 4: Multiply by W_O
     // return output
 }
+```
 
 Step1: just 3 mat_mul calls.
- mha is the whole struct. We need the specific weight matrices inside it. Which ones?
 
+mha is the whole struct. We need the specific weight matrices inside it. Which ones?
+
+```c
 Tensor* Q_proj = mat_mul(Q, mha->W_Q);
 Tensor* K_proj = mat_mul(K, mha->W_K);
 Tensor* V_proj = mat_mul(V, mha->W_V);
+```
 
-Now Step 2: for each head, slice and run attention. 
+Now Step 2: for each head, slice and run attention.
 
+```c
 int d_k = mha->d_model / mha->h;
 Tensor* head_outputs[mha->h];
 
@@ -237,7 +295,9 @@ for (int i = 0; i < mha->h; i++) {
     // run attention
     // store in head_outputs[i]
 }
+```
 
+```c
 Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
     int d_k = mha->d_model / mha->h;
 
@@ -274,10 +334,11 @@ Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
 
     return out;
 }
+```
 
+let me explain it visually so it clicks:
 
- let me explain it visually so it clicks:
-
+```text
  Input Q (seq_len, d_model)
         ↓ × W_Q
 Q_proj (seq_len, d_model)
@@ -289,5 +350,6 @@ att  att  att  ... att    attention per head
 [concat all heads back]
         ↓ × W_O
    output (seq_len, d_model)
+```
 
 Each head sees a different slice of the projected Q, K, V — so each head learns to attend differently. That's the whole idea.
