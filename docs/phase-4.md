@@ -364,3 +364,18 @@ Now the full encoder_forwatd is in `encoder.c` file. Check it out.
 
 For encoder.h — same pattern as before. Include guards, include attention.h, struct definition, and 3 function declarations. Try writing it!
 
+---
+
+Heyy!!
+
+from not knowing ABC of transformers to writing the full encoder block in C - you are doing amazing!!
+It takes a lot of time and resilience to understand and implement these concepts, so give yourself some credit.
+
+These are for me th e most rewarding moments..
+i am super super excited to relaease this as a github repo and see what you all build with it.
+
+we have successfully implemented the encoder block (Encoder - BERT, RoBERTa which is ised to Understanding text, sentiment analysis, question answering, etc). Next up - the decoder block (Decoder - GPT which is used for generating text, code, images, etc).
+
+Before we dive into the decoder, let's take a moment to appreciate what we've built so far. 
+
+Read ENCODER.md to read the beauty of the encoder block in more detail.

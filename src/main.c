@@ -48,3 +48,17 @@ int main() {
     encoder_free(enc);
     return 0;
 }
+
+// Sanity check: verify layer norm properties
+printf("\nLayer Norm Sanity Check:\n");
+for (int i = 0; i < output->rows; i++) {
+    float sum = 0.0f, sq_sum = 0.0f;
+    for (int j = 0; j < output->cols; j++) {
+        float val = tensor_get(output, i, j);
+        sum += val;
+        sq_sum += val * val;
+    }
+    float mean = sum / output->cols;
+    float var = sq_sum / output->cols - mean * mean;
+    printf("Row %d → mean: %.6f, variance: %.6f\n", i, mean, var);
+}

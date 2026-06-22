@@ -1,25 +1,19 @@
 #ifndef ENCODER_H
 #define ENCODER_H
-#include "tensor.h"
+
 #include "attention.h"
+#include "math_ops.h"
 
 typedef struct {
     MultiHeadAttention* mha;
-
-    // Layer norm 1 (after MHA)
     float* gamma1;
     float* beta1;
-
-    // Layer norm 2 (after FFN)
     float* gamma2;
     float* beta2;
-
-    // Feed forward network weights
-    Tensor* W1;   // (d_model, d_ff)
-    Tensor* W2;   // (d_ff, d_model)
-    float* b1;    // bias for layer 1
-    float* b2;    // bias for layer 2
-
+    Tensor* W1;
+    Tensor* W2;
+    float* b1;
+    float* b2;
     int d_model;
     int d_ff;
 } EncoderBlock;
