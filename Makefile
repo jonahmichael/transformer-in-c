@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra
-SRC = src/tensor.c src/math_ops.c src/attention.c src/encoder.c src/main.c
+SRC = src/tensor.c src/math_ops.c src/attention.c src/encoder.c src/main.c src/decoder.c
 OUT = transformer
 
 build:
