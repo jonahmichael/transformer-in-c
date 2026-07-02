@@ -6,8 +6,9 @@ i will be using Claude/chatgpt's help ofc but not to generate a 300 line code bu
 
 i thought what better to document my journey - other than to live stream it
 so i will be live streaming my learning in yt everytime i learn/do it
-(actually i am unable to do this)
-i will be using ubuntu as the os of my choice.
+(actually i am unable to do this...)
+
+i will be using ubuntu as the os of my choice. ( again no, i am using WSL in wisnows 11)
 vs code 
 c 
 
@@ -40,4 +41,6 @@ byee :)
 
 ( also i wont use ai to generate documentation, it just kills the purpose of the doc)
 ( every doc will be hand written by me so that i can take u on a journey of how my brain understood the concept..)
+(some of the docs will be a bit technical, but i will try to explain it in a way that even a beginner can understand it)
+(the main.c files will be written using AI and even the MakeFile, not because i cant write it, but because i want to save time and focus on the main part of the project... but in case you wish to write it yourself, i will give you the guide on how to write and what this MakeFile does in the docs folder.. but that will be done once the project is completed and i have time to write it..)
 ( checkout docs to know how i navigated thru)
