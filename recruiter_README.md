@@ -150,7 +150,8 @@ the outputs of all heads are concatenated and projected through w_o to mix infor
 ### residual connections
 
 every sublayer (attention, ffn) adds its input back to its output:
-```output = sublayer(input) + input
+```
+output = sublayer(input) + input
 ```
 
 this creates a gradient highway that allows gradients to flow directly through deep stacks without vanishing. without residuals, training transformers with 6+ layers would be practically impossible.
