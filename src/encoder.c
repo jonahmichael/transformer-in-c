@@ -6,24 +6,24 @@
 #include "attention.h"
 
 EncoderBlock* encoder_create(int d_model, int d_ff, int h) {
-    EncoderBlock* enc = malloc(sizeof(EncoderBlock));
+    EncoderBlock* enc = calloc(sizeof(EncoderBlock));
     
     // MHA
     enc->mha = mha_create(h, d_model);
     
     // Layer norm parameters
-    enc->gamma1 = malloc(sizeof(float) * d_model);
-    enc->beta1  = malloc(sizeof(float) * d_model);
-    enc->gamma2 = malloc(sizeof(float) * d_model);
-    enc->beta2  = malloc(sizeof(float) * d_model);
+    enc->gamma1 = calloc(sizeof(float) * d_model);
+    enc->beta1  = calloc(sizeof(float) * d_model);
+    enc->gamma2 = calloc(sizeof(float) * d_model);
+    enc->beta2  = calloc(sizeof(float) * d_model);
     
     // FFN weights
     enc->W1 = tensor_create(d_model, d_ff);
     enc->W2 = tensor_create(d_ff, d_model);
     
     // FFN biases
-    enc->b1 = malloc(sizeof(float) * d_ff);
-    enc->b2 = malloc(sizeof(float) * d_model);
+    enc->b1 = calloc(sizeof(float) * d_ff);
+    enc->b2 = calloc(sizeof(float) * d_model);
     
     // Config
     enc->d_model = d_model;

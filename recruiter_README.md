@@ -229,7 +229,7 @@ the tiny deviation from 1.0 is normal floating point precision — pytorch produ
 ## reference
 
 vaswani, a., shazeer, n., parmar, n., uszkoreit, j., jones, l., gomez, a. n., kaiser, l., & polosukhin, i. (2017). attention is all you need. advances in neural information processing systems, 30.
-
+-[paper]{attention-is-all-you-need.pdf}
 inspired by andrej karpathy's llama2.c and llm.c projects.
 
 ---
