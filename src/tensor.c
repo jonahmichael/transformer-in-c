@@ -3,7 +3,8 @@
 
 Tensor* tensor_create(int rows, int cols) {
     Tensor* t = malloc(sizeof(Tensor));
-    t->data = malloc(rows * cols * sizeof(float));
+    t->data = calloc(rows * cols, sizeof(float));   // we use calloc or else, there will be uninitialized values in the tensor, which will cause problems in the attention mechanism whereas calloc initializes all values to zero, which is what we want...
+
     t->rows = rows;
     t->cols = cols;
     return t;

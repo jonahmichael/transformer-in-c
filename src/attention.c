@@ -35,7 +35,7 @@ Tensor* transpose(Tensor* K) {
  * Think of it like a search engine:
  * Q is your search query, K are page titles, V are page contents
  */
-Tensor* attention(Tensor* Q, Tensor* K, Tensor* V) {
+Tensor* attention(Tensor* Q, Tensor* K, Tensor* V, int causal) {
     // Step 1: QK^T — how much does each query match each key?
     // Result shape: (seq_len, seq_len)
     Tensor* Kt = transpose(K);
@@ -48,6 +48,19 @@ Tensor* attention(Tensor* Q, Tensor* K, Tensor* V) {
         for (int j = 0; j < scores->cols; j++) {
             tensor_set(scores, i, j,
                 tensor_get(scores, i, j) / sqrtf((float)K->cols));
+        }
+    }
+
+    // welcome back guyss!! we are in phase 8 and we are here again to add masking to the attention mechanism.. so that the decoder can not see the future tokens while predicting the next token in the sequence.. so let's do it
+
+    // Step 2.5: Apply causal mask — prevent attending to future positions
+    if (causal){
+        for (int i = 0; i < scores->rows; i++) {
+            for (int j = 0; j < scores->cols; j++) {
+                if (j > i) {
+                    tensor_set(scores, i, j, -1e9f);
+                }
+            }
         }
     }
 
@@ -151,7 +164,7 @@ void mha_free(MultiHeadAttention* mha) {
  * 3. Concatenate all head outputs
  * 4. Final linear projection using W_O
  */
-Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
+Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V, int causal){
     int d_k = mha->d_model / mha->h;  // dimension per head
 
     // Step 1: Linear projections
@@ -167,7 +180,7 @@ Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V) {
         Tensor* Q_i = get_head_slice(Q_proj, i, d_k);
         Tensor* K_i = get_head_slice(K_proj, i, d_k);
         Tensor* V_i = get_head_slice(V_proj, i, d_k);
-        head_outputs[i] = attention(Q_i, K_i, V_i);
+        head_outputs[i] = attention(Q_i, K_i, V_i, causal);  // Apply causal mask
         tensor_free(Q_i);
         tensor_free(K_i);
         tensor_free(V_i);

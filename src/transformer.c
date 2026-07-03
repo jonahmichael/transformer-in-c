@@ -31,7 +31,15 @@ void transformer_init_random(Transformer* t) {
             t->decoders[i]->gamma2[j] = 1.0f; t->decoders[i]->beta2[j] = 0.0f;
             t->decoders[i]->gamma3[j] = 1.0f; t->decoders[i]->beta3[j] = 0.0f;
         }
+
+        // initialize biases to zero
+        for (int j = 0; j < t->d_ff; j++)    t->encoders[i]->b1[j] = 0.0f;
+        for (int j = 0; j < t->d_model; j++) t->encoders[i]->b2[j] = 0.0f;
+        for (int j = 0; j < t->d_ff; j++)    t->decoders[i]->b1[j] = 0.0f;
+        for (int j = 0; j < t->d_model; j++) t->decoders[i]->b2[j] = 0.0f;
     }
+
+    
 }
 
 Transformer* transformer_create(int N, int d_model, int d_ff, int h) {

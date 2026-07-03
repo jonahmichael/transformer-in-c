@@ -51,7 +51,7 @@ void encoder_free(EncoderBlock* enc) {
 
 Tensor* encoder_forward(EncoderBlock* enc, Tensor* input) {
     // Step 1: Multi-head self-attention
-    Tensor* mha_out = mha_forward(enc->mha, input, input, input);
+    Tensor* mha_out = mha_forward(enc->mha, input, input, input, 0);
 
     // Step 2: Residual + Layer Norm 1
     Tensor* add1 = mat_add(input, mha_out);

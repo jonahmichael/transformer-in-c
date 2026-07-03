@@ -20,7 +20,7 @@ typedef struct {
 } MultiHeadAttention;
 
 Tensor* transpose(Tensor* K);
-Tensor* attention(Tensor* Q, Tensor* K, Tensor* V);
+Tensor* attention(Tensor* Q, Tensor* K, Tensor* V, int causal);
 
 
 // ---------- MHA RELATED STUFFS -------------
@@ -29,7 +29,7 @@ Tensor* get_head_slice(Tensor* X, int head, int d_k);
 Tensor* concat_heads(Tensor** heads, int h, int d_k);
 MultiHeadAttention* mha_create(int h, int d_model);
 void mha_free(MultiHeadAttention* mha);
-Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V);
+Tensor* mha_forward(MultiHeadAttention* mha, Tensor* Q, Tensor* K, Tensor* V, int causal);
 
 void fill_random(Tensor* t);
 
