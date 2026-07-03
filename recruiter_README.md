@@ -179,7 +179,7 @@ verified:
 row 0 -- mean: 0.000000, variance: 0.999990
 row 1 -- mean: 0.000000, variance: 0.999990
 row 2 -- mean: 0.000000, variance: 0.999990
-
+```
 the tiny deviation from 1.0 is normal floating point precision — pytorch produces the same deviation.
 
 ---
