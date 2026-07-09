@@ -1,11 +1,15 @@
-
+#include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include "tensor.h"
 #include "math_ops.h"
 #include "attention.h"
 
+// global flag — set to 1 to dump attention weights to file
+// this is addded for Attention Visialisation to create a heatmap of the attention weights for each head and each layer in the transformer model. This can help us understand what the model is focusing on when making predictions.
 
+int g_dump_attention = 0;
+FILE* g_attention_file = NULL;
 
 /* 
  * Flip rows and columns of a matrix
@@ -69,6 +73,19 @@ Tensor* attention(Tensor* Q, Tensor* K, Tensor* V, int causal) {
     // Higher score = more attention paid to that position
     for (int i = 0; i < scores->rows; i++) {
         softmax(scores->data + i * scores->cols, scores->cols);
+    }
+
+    // dump attention weights if flag is set
+    if (g_dump_attention && g_attention_file) {
+        for (int i = 0; i < scores->rows; i++) {
+            for (int j = 0; j < scores->cols; j++) {
+                fprintf(g_attention_file, "%.6f",
+                        tensor_get(scores, i, j));
+                if (j < scores->cols - 1) fprintf(g_attention_file, ",");
+            }
+            fprintf(g_attention_file, "\n");
+        }
+        fprintf(g_attention_file, "---\n");
     }
 
     // Step 4: Multiply by V

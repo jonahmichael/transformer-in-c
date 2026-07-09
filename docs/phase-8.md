@@ -35,7 +35,9 @@ its the same thing, but i just wanted to show you guys how to create a mask tens
 
 also we need to change the signature our current attention function always applies the mask. But the encoder doesn't need masking, only the decoder's self-attention does.
 So we need to make masking optional. Change the signature to:
+-+
 
+---
 ```c
 Tensor* attention(Tensor* Q, Tensor* K, Tensor* V, int causal);
 ```

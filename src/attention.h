@@ -1,7 +1,12 @@
 #ifndef ATTENTION_H
 #define ATTENTION_H
 
+#include <stdio.h>
 #include "tensor.h"
+
+// these two are for Attention Visualisation
+extern int g_dump_attention;
+extern FILE* g_attention_file;
 
 /*
  * MultiHeadAttention block
@@ -21,7 +26,6 @@ typedef struct {
 
 Tensor* transpose(Tensor* K);
 Tensor* attention(Tensor* Q, Tensor* K, Tensor* V, int causal);
-
 
 // ---------- MHA RELATED STUFFS -------------
 
