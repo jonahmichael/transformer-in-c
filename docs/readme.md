@@ -34,8 +34,7 @@ So my references is ;
 - claude/chatgpt etc for learning and doubt clarifications
 - ilaya 30 papers 
 
-just in case, u wanna follow up with my live journey
-checkout my yt channel: https://www.youtube.com/@jonah_Mi/
+
 
 byee :)
 
